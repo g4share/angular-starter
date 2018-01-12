@@ -1,0 +1,90 @@
+#!/bin/sh
+
+do_help() {
+  echo "Usage:	docker-run [options]"
+  echo
+  echo "Prepare application image for production environment"
+  echo
+  echo "Options:"
+  echo "  -h, --help              "
+  echo "  -b, --build             Build 'angular-starter:nginx' image"
+  echo "  -u, --up                Create and start 'angular-starter:nginx' container"
+  echo "  -d, --down              Stop and remove 'angular-starter:nginx' containers"
+}
+
+do_build() {
+  distpath="./.dist"
+  cidfile=".cid"
+
+  rm -rf $distpath
+  rm $cidfile
+
+  echo "\x1B[1;32mCreate Node image...\x1B[0m"
+  docker build -f Dockerfile.node -t angular-starter:node-temp .
+
+  echo "\x1B[1;32mCompile production version of the project...\x1B[0m"
+  docker run --cidfile $cidfile -it angular-starter:node-temp npm run build:aot
+
+  cid="$(cat $cidfile)"
+  docker cp $cid:/home/app/dist $distpath
+  docker rm -v $cid
+
+  echo "\x1B[1;32mCreate Nginx production image...\x1B[0m"
+  docker build -f Dockerfile.nginx -t angular-starter:nginx .
+
+  echo "\x1B[1;32mClean...\x1B[0m"
+  rm -rf $distpath
+  rm -f $cidfile
+  docker rmi angular-starter:node-temp
+}
+
+do_up() {
+  echo "\x1B[1;32mStart Nginx container...\x1B[0m"
+  echo "\x1B[1;35mTo start application open \x1B[1;4m'https://localhost:8080/'\x1B[1;24m link in browser.\x1B[0m"
+  docker run --name angular-starter-nginx -p 8080:80 angular-starter:nginx &
+}
+
+do_down() {
+  echo "\x1B[1;32mStop Nginx container...\x1B[0m"
+  ccid="$(docker ps -a -q --filter ancestor="angular-starter:nginx" --format="{{.ID}}")"
+  if [ -z "$ccid" ] ; then
+    echo 'No container found'
+  else
+    docker rm $(docker stop $ccid)
+  fi
+}
+
+
+build=false;up=false;down=false;help=false;
+if [ -z "$1" ] ; then
+  build=true;up=true;
+fi
+
+while test $# -gt 0
+do
+  case "$1" in
+    -b|--build) build=true; ;;
+    -u|--up)    up=true;    ;;
+    -d|--down)  down=true;  ;;
+    -h|--help)  help=true;  ;;
+    *)          help=true;  ;;
+  esac
+  shift
+done
+
+if [ "$help" = true ] ; then
+  do_help
+  exit 1
+fi
+
+if [ "$build" = true ] ; then
+  do_build
+fi
+
+if [ "$up" = true ] ; then
+  do_up
+fi
+
+if [ "$down" = true ] ; then
+  do_down
+fi
