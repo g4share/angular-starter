@@ -40,7 +40,7 @@ do_build() {
 
 do_up() {
   echo "\x1B[1;32mStart Nginx container...\x1B[0m"
-  echo "\x1B[1;35mTo start application open \x1B[1;4m'https://localhost:8080/'\x1B[1;24m link in browser.\x1B[0m"
+  echo "\x1B[1;35mTo start application open \x1B[1;4m'http://localhost:8080/'\x1B[1;24m link in browser.\x1B[0m"
   docker run --name angular-starter-nginx -p 8080:80 angular-starter:nginx &
 }
 

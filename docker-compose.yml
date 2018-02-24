@@ -14,4 +14,4 @@ services:
       - /home/app/node_modules
 networks:
   angular-starter:
-driver: bridge
+    driver: bridge
